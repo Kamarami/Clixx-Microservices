@@ -1,0 +1,7 @@
+#!/bin/bash
+
+#Install & start ECS agent
+sudo yum install ecs-init && sudo start ecs
+
+#Change ECS_CLUSTER variable
+echo ECS_CLUSTER=clixx-ecs >> /etc/ecs/ecs.config

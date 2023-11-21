@@ -1,0 +1,44 @@
+pipeline {
+  agent any
+
+  environment {
+      VERSION = "1.0.${BUILD_NUMBER}"
+      PATH = "${PATH}:${getTerraformPath()}"
+      // PATH = "${PATH}:${getSonarPath()}:${getDockerPath()}"
+      RUNNER = "${RUNNER}"
+      AMI_ID = "stack-ami-${BUILD_NUMBER}"
+  }
+  stages{
+        stage('Initial Stage') {
+              steps {
+                script {
+                def userInput = input(id: 'confirm', message: 'Start Pipeline?', parameters: [ [$class: 'BooleanParameterDefinition', defaultValue: false, description: 'Start Pipeline', name: 'confirm'] ])
+             }
+           }
+        }
+         stage('terraform init'){
+             steps {
+                 sh "terraform init"
+                 slackSend (color: '#FFFF00', message: "STARTING TERRAFORM ECS DEPLOYMENT ${env.RUNNER}: Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL}/input)")
+         }
+         }
+         stage('Terraform Plan'){
+             steps {
+                 sh "terraform plan -out=tfplan -input=false"
+             }
+         }
+        stage('Build Instance') {
+              steps {
+                slackSend (color: '#FFFF00', message: "STARTING ECS INFRASTRUCTURE BUILD '${env.RUNNER}': Job '${env.JOB_NAME} [${env.BUILD_NUMBER}]' (${env.BUILD_URL}/input)"){
+                sh """
+                terraform ${TERRAFORM_ACTION} -auto-approve
+                """
+              }
+           }
+        }        
+    }
+}
+ def getTerraformPath(){
+        def tfHome= tool name: 'terraform-14', type: 'terraform'
+        return tfHome
+    }
